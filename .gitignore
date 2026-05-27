@@ -1,0 +1,7 @@
+**/node_modules/
+
+# Go server
+projects/server/data/issue_tracker.db
+projects/server/uploads/*
+!projects/server/uploads/.gitkeep
+projects/server/bin/
