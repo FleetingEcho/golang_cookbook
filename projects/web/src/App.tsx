@@ -20,10 +20,13 @@ import { IssueList } from "./components/IssueList";
 import { ThemeToggle } from "./components/ThemeToggle";
 import type { CreateIssueInput, Issue, IssueDetail, IssueFilters, Label } from "./types/issue";
 
+// ── 分页配置 ───────────────────────────────────────────────────────────────
+const PAGE_SIZES = [10, 25, 50] as const;
+
 export default function App() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [labels, setLabels] = useState<Label[]>([]);
-  // 从 URL 中读取初始 selectedId，支持直接访问 /issues/5
+  // 从 URL 中读取初始 selectedId
   const [selectedId, setSelectedId] = useState<number | null>(() => {
     const m = window.location.pathname.match(/^\/issues\/(\d+)/);
     return m ? parseInt(m[1], 10) : null;
@@ -34,6 +37,14 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [backend, setBackend] = useState<"checking" | "ok" | "error">("checking");
+
+  // ── 分页状态 ──────────────────────────────────────────────────────────
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(25);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const showingFrom = (page - 1) * pageSize + (issues.length > 0 ? 1 : 0);
+  const showingTo = Math.min((page - 1) * pageSize + issues.length, totalCount);
 
   const checkHealth = useCallback(async () => {
     try {
@@ -46,30 +57,22 @@ export default function App() {
 
   const selectedLabelIds = useMemo(() => selected?.labels.map((label) => label.id) ?? [], [selected]);
 
-  async function refreshList(nextFilters = filters) {
+  async function refreshList(nextFilters = filters, nextPage = page, nextPageSize = pageSize) {
     setLoading(true);
     setError(null);
     try {
-      const [issueData, labelData] = await Promise.all([listIssues(nextFilters), listLabels()]);
+      const query: IssueFilters = {
+        ...nextFilters,
+        limit: nextPageSize,
+        offset: (nextPage - 1) * nextPageSize,
+      };
+      const [issueData, labelData] = await Promise.all([listIssues(query), listLabels()]);
       setIssues(issueData.items);
       setTotalCount(issueData.total);
       setLabels(labelData);
       if (!selectedId && issueData.items[0]) setSelectedId(issueData.items[0].id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load issues");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleLoadMore() {
-    const next = { ...filters, offset: issues.length };
-    setLoading(true);
-    try {
-      const more = await listIssues(next);
-      setIssues((prev) => [...prev, ...more.items]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load more");
     } finally {
       setLoading(false);
     }
@@ -90,11 +93,7 @@ export default function App() {
 
   // URL 与 selectedId 同步
   useEffect(() => {
-    if (selectedId) {
-      history.replaceState(null, "", `/issues/${selectedId}`);
-    } else {
-      history.replaceState(null, "", "/");
-    }
+    history.replaceState(null, "", selectedId ? `/issues/${selectedId}` : "/");
   }, [selectedId]);
 
   // 监听浏览器前进/后退
@@ -121,14 +120,55 @@ export default function App() {
     return () => clearInterval(interval);
   }, [checkHealth]);
 
+  // ── 分页导航 ──────────────────────────────────────────────────────────
+  function goToPage(p: number) {
+    if (p < 1 || p > totalPages || p === page || loading) return;
+    setPage(p);
+    refreshList(filters, p, pageSize);
+  }
+
+  // 生成页码列表，例如 [1, '...', 4, 5, 6, '...', 20]
+  function getPageNumbers(): (number | "ellipsis")[] {
+    const pages: (number | "ellipsis")[] = [];
+    const total = totalPages;
+    const current = page;
+    const delta = 2; // 当前页两侧显示几个页码
+
+    // 固定显示第 1 页
+    pages.push(1);
+
+    const rangeStart = Math.max(2, current - delta);
+    const rangeEnd = Math.min(total - 1, current + delta);
+
+    if (rangeStart > 2) pages.push("ellipsis");
+
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+      pages.push(i);
+    }
+
+    if (rangeEnd < total - 1) pages.push("ellipsis");
+
+    if (total > 1) pages.push(total);
+
+    return pages;
+  }
+
+  function handlePageSizeChange(newSize: number) {
+    setPageSize(newSize);
+    setPage(1);
+    refreshList(filters, 1, newSize);
+  }
+
   async function handleFilterChange(next: IssueFilters) {
     setFilters(next);
-    await refreshList(next);
+    setPage(1);
+    await refreshList(next, 1, pageSize);
   }
 
   async function handleCreate(input: CreateIssueInput) {
     const created = await createIssue(input);
-    await refreshList();
+    setPage(1);
+    await refreshList(filters, 1, pageSize);
     setSelectedId(created.id);
   }
 
@@ -201,16 +241,64 @@ export default function App() {
       <section className="workspace">
         <aside className="sidebar">
           <FilterBar filters={filters} labels={labels} onChange={handleFilterChange} />
+          {/* ── List header: title + count + page size ─────────────── */}
           <div className="list-header">
             <span>Issues</span>
             <span className="list-count">{totalCount}</span>
+            <div className="list-header-spacer" />
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="pagination-select"
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s} / page
+                </option>
+              ))}
+            </select>
           </div>
           <IssueList issues={issues} selectedId={selectedId} onSelect={setSelectedId} />
-          {issues.length < totalCount && (
-            <button className="load-more" onClick={handleLoadMore} disabled={loading}>
-              {loading ? "Loading…" : `Load more (${issues.length}/${totalCount})`}
-            </button>
-          )}
+
+          {/* ── 页码 ────────────────────────────────────────────────── */}
+          <div className="pagination">
+            {totalCount > 0 && (
+              <div className="pagination-range">
+                {showingFrom}–{showingTo} of {totalCount}
+              </div>
+            )}
+            <div className="pagination-controls">
+              <button
+                className="pagination-btn"
+                onClick={() => goToPage(page - 1)}
+                disabled={page <= 1}
+              >
+                ‹
+              </button>
+
+              {getPageNumbers().map((p, i) =>
+                p === "ellipsis" ? (
+                  <span key={`e-${i}`} className="pagination-ellipsis">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    className={`pagination-btn ${p === page ? "active" : ""}`}
+                    onClick={() => goToPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                className="pagination-btn"
+                onClick={() => goToPage(page + 1)}
+                disabled={page >= totalPages}
+              >
+                ›
+              </button>
+            </div>
+          </div>
         </aside>
 
         <section className="detail-pane">
@@ -247,4 +335,3 @@ export default function App() {
     </main>
   );
 }
-

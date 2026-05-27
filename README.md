@@ -4,7 +4,28 @@
 
 ---
 
-## Quick Navigation
+## 🖥️ Issue Tracker Demo — Full-Stack Project
+
+A production-style Go REST API with a React frontend for tracking issues, comments, labels, and file attachments.
+
+![Issue Tracker Screenshot](./images/project.png)
+
+| Layer | Stack | Description |
+|-------|-------|-------------|
+| **Backend** | Go 1.23+ / chi / SQLite | [`projects/server/`](./projects/server/) — 16 REST endpoints, middleware, testing |
+| **Frontend** | React 19 / Vite / TypeScript | [`projects/web/`](./projects/web/) — SPA with filtering, pagination, theming |
+| **API Docs** | Swagger UI | `http://localhost:3001/swagger/index.html` |
+
+```bash
+# Quick start
+cd projects/server
+make seed    # seed 110 issues + 95 comments
+make run     # start on :3001
+```
+
+---
+
+## 📖 Go Cookbook — Quick Navigation
 
 ### 01 — Language Fundamentals
 
@@ -94,6 +115,7 @@ go run golang-cookbook/go_templates/io_template.go
     ├── server/                         ← Go API (chi + sqlite)
     └── web/                            ← React + Vite SPA
 ```
+
 
 ## Go Version Requirements
 

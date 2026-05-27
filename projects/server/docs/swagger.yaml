@@ -1,0 +1,774 @@
+basePath: /api
+definitions:
+  models.Attachment:
+    properties:
+      contentType:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      issueId:
+        type: integer
+      originalFilename:
+        type: string
+      sizeBytes:
+        type: integer
+      storedFilename:
+        type: string
+    type: object
+  models.Comment:
+    properties:
+      author:
+        type: string
+      body:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      issueId:
+        type: integer
+    type: object
+  models.CreateCommentRequest:
+    properties:
+      author:
+        type: string
+      body:
+        type: string
+    type: object
+  models.CreateIssueRequest:
+    properties:
+      assignee:
+        type: string
+      createdBy:
+        type: string
+      description:
+        type: string
+      issueType:
+        type: string
+      labelIds:
+        items:
+          type: integer
+        type: array
+      priority:
+        type: string
+      title:
+        type: string
+    type: object
+  models.CreateLabelRequest:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+    type: object
+  models.Issue:
+    properties:
+      assignee:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      issueType:
+        type: string
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.IssueDetail:
+    properties:
+      assignee:
+        type: string
+      attachments:
+        items:
+          $ref: '#/definitions/models.Attachment'
+        type: array
+      comments:
+        items:
+          $ref: '#/definitions/models.Comment'
+        type: array
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      issueType:
+        type: string
+      labels:
+        items:
+          $ref: '#/definitions/models.Label'
+        type: array
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.Label:
+    properties:
+      color:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  models.PaginatedResponse-models_Issue:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/models.Issue'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  models.UpdateIssueRequest:
+    properties:
+      assignee:
+        type: string
+      description:
+        type: string
+      issueType:
+        type: string
+      labelIds:
+        items:
+          type: integer
+        type: array
+      priority:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+host: localhost:3001
+info:
+  contact:
+    email: developer@example.com
+    name: API Support
+  description: A production-style Go REST API for tracking issues, comments, labels,
+    and file attachments.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/FleetingEcho/golang_cookbook
+  title: Issue Tracker API
+  version: 1.0.0
+paths:
+  /attachments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an attachment record and its file from disk.
+      parameters:
+      - description: Attachment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete an attachment
+      tags:
+      - attachments
+  /attachments/{id}/download:
+    get:
+      description: Downloads the original file by attachment ID.
+      parameters:
+      - description: Attachment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Download an attachment
+      tags:
+      - attachments
+  /comments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a comment by its ID.
+      parameters:
+      - description: Comment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a comment
+      tags:
+      - comments
+  /issues:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of issues, optionally filtered by status,
+        priority, type, label, or search text.
+      parameters:
+      - description: Filter by status (open, in_progress, closed)
+        in: query
+        name: status
+        type: string
+      - description: Filter by priority (low, medium, high)
+        in: query
+        name: priority
+        type: string
+      - description: Filter by issue type (bug, feature, task, question)
+        in: query
+        name: issueType
+        type: string
+      - description: Filter by label ID
+        in: query
+        name: labelId
+        type: integer
+      - description: Search in title and description
+        in: query
+        name: search
+        type: string
+      - description: Max results (default 5, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Result offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PaginatedResponse-models_Issue'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List issues with pagination and filtering
+      tags:
+      - issues
+    post:
+      consumes:
+      - application/json
+      description: Creates a new issue with optional label associations.
+      parameters:
+      - description: Issue data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateIssueRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.IssueDetail'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new issue
+      tags:
+      - issues
+  /issues/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an issue and all its associated comments, labels, and attachments.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete an issue
+      tags:
+      - issues
+    get:
+      consumes:
+      - application/json
+      description: Returns a single issue with its labels, comments, and attachments.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.IssueDetail'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get issue detail
+      tags:
+      - issues
+    patch:
+      consumes:
+      - application/json
+      description: Updates specific fields of an issue. Only provided fields are changed.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateIssueRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.IssueDetail'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update an issue (partial update)
+      tags:
+      - issues
+  /issues/{issueID}/attachments:
+    get:
+      consumes:
+      - application/json
+      description: Returns all attachments for a given issue.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Attachment'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List attachments for an issue
+      tags:
+      - attachments
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a file as an attachment to an issue (multipart/form-data).
+        Max 10MB.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      - description: File to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Attachment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload a file attachment
+      tags:
+      - attachments
+  /issues/{issueID}/comments:
+    get:
+      consumes:
+      - application/json
+      description: Returns all comments for a given issue, ordered by creation date.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Comment'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List comments for an issue
+      tags:
+      - comments
+    post:
+      consumes:
+      - application/json
+      description: Creates a new comment on the specified issue.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      - description: Comment data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Comment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add a comment to an issue
+      tags:
+      - comments
+  /issues/{issueID}/labels/{labelID}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes the link between a label and an issue.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Detach a label from an issue
+      tags:
+      - labels
+    post:
+      consumes:
+      - application/json
+      description: Links an existing label to an issue.
+      parameters:
+      - description: Issue ID
+        in: path
+        name: issueID
+        required: true
+        type: integer
+      - description: Label ID
+        in: path
+        name: labelID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Attach a label to an issue
+      tags:
+      - labels
+  /labels:
+    get:
+      consumes:
+      - application/json
+      description: Returns all available labels, ordered by name.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Label'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: List all labels
+      tags:
+      - labels
+    post:
+      consumes:
+      - application/json
+      description: Creates a new label with a name and color.
+      parameters:
+      - description: Label data
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateLabelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Label'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new label
+      tags:
+      - labels
+securityDefinitions:
+  ApiKeyAuth:
+    description: 'API key for authentication. Default: dev-secret'
+    in: header
+    name: x-api-key
+    type: apiKey
+swagger: "2.0"

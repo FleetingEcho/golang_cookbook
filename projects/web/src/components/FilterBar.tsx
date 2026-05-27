@@ -44,7 +44,7 @@ export function FilterBar({ filters, labels, onChange }: Props) {
           <option value="task">Task</option>
           <option value="question">Question</option>
         </select>
-        <select value={filters.label_id ?? ""} onChange={(event) => update("label_id", event.target.value)}>
+        <select value={filters.labelId ?? ""} onChange={(event) => update("labelId", event.target.value)}>
           <option value="">All labels</option>
           {labels.map((label) => (
             <option key={label.id} value={label.id}>
