@@ -527,7 +527,8 @@ func Max[T ~int | ~float64](a, b T) T {
 | 丢弃值 | 无语言支持 | `_` |
 | 取地址 | 所有变量天然可引用 | `&x` — 不是所有变量可寻址（map 元素 ❌） |
 | 泛型变量 | `function f<T>(x:T)` | `func F[T any](x T)` |
-| 类型别名 | `type ID = string` | `type ID string` |
+| 类型定义（新类型） | `type ID = string`（别名） | `type ID string`（新类型，不能与 string 互转） |
+| 类型别名（可互换） | 同上（TS 无区分） | `type ID = string`（与 string 完全互换） |
 | 类型推断 | 常用 | 常用 |
 | 遮蔽 | 块级 `{}` | 块级 `{}` |
 

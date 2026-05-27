@@ -204,6 +204,9 @@ func NewPair[T, U any](first T, second U) Pair[T, U] {
 }
 
 // 使用场景 1：BFS 网格坐标
+// ⚠️ 这里用 `type Point = Pair[int, int]`（类型别名，含 =）
+// `Pair[int, int]` 和 `Point` 完全可互换
+// 如果用 `type Point Pair[int,int]`（定义，不含 =）则创建新类型，不能互转
 type Point = Pair[int, int]
 queue := []Point{NewPair(0, 0)}
 for len(queue) > 0 {
